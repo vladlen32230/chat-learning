@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from src.schemas.api.document import PDF, Images, UpdateChunk
+from src.schemas.api_document import PDF, Images, UpdateChunk
 from src.models import Document, Chunk
 
 router = APIRouter(prefix='/document', tags=['document'])
