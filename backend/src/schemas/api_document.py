@@ -1,11 +1,10 @@
 from fastapi import UploadFile
 from pydantic import BaseModel
+from typing import Literal
 
-class PDF(BaseModel):
-    file: UploadFile
-
-class Images(BaseModel):
+class DocumentProcess(BaseModel):
     files: list[UploadFile]
+    type: Literal['pdf', 'images']
 
 class UpdateChunk(BaseModel):
     completed: bool

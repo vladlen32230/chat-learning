@@ -2,8 +2,13 @@ from openai import AsyncOpenAI
 import os
 from mistralai.models.ocrresponse import OCRResponse
 import asyncio
+from json import loads
+import re
 
 async def chunk_text(ocr_response: OCRResponse) -> list[str]:
+    """
+    Chunk is either plain text or base64 encoded image.
+    """
     client = AsyncOpenAI(
         api_key=os.environ['OPENROUTER_API_KEY'],
         base_url="https://openrouter.ai/api/v1"
@@ -36,4 +41,32 @@ async def chunk_text(ocr_response: OCRResponse) -> list[str]:
 
     responses = await asyncio.gather(*requests)
 
-    return [response.choices[0].message.content for response in responses]
+    chunks_list = [loads(response.choices[0].message.content) for response in responses]
+
+    all_chunks = []
+    
+    for page, chunks in zip(ocr_response.pages, chunks_list):
+        # Process each chunk to convert image references to base64
+        processed_chunks = []
+        for chunk in chunks:
+            # Look for image markdown pattern: ![img-<id>.jpeg](img-<id>.jpeg)
+            img_pattern = r'!\[img-(\d+)\.jpeg\]\(img-\d+\.jpeg\)'
+            matches = re.findall(img_pattern, chunk)
+            
+            if matches:
+                # If this chunk contains image references, replace them with base64 images
+                processed_chunk = chunk
+                for img_id in matches:
+                    img_id = int(img_id)
+                    # Replace the markdown image with base64 image
+                    img_markdown = f'![img-{img_id}.jpeg](img-{img_id}.jpeg)'
+                    base64_image = page.images[img_id].image_base64
+                    processed_chunk = processed_chunk.replace(img_markdown, base64_image)
+                processed_chunks.append(processed_chunk)
+            else:
+                # Regular text chunk
+                processed_chunks.append(chunk)
+        
+        all_chunks.extend(processed_chunks)
+
+    return all_chunks

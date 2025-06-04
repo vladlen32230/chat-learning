@@ -1,44 +1,23 @@
 from fastapi import APIRouter
-from src.schemas.api_document import PDF, Images, UpdateChunk
+from src.schemas.api_document import DocumentProcess, UpdateChunk
 from src.models import Document, Chunk
 
 router = APIRouter(prefix='/document', tags=['document'])
 
 
 @router.post(
-    '/from_pdf',
+    '',
     response_model=Document,
     status_code=201,
     responses={}
 )
 async def create_document(
-    request: PDF
+    request: DocumentProcess
 ):
     """
-    Create a new document from PDF file.
+    Create a new document from PDF file or multiple images.
 
-    1. It converts PDF file into text using OCR tools.
-    2. It chunks text into logical parts.
-    3. It creates a new document in database.
-    4. It creates a new chunk in database for each logical part.
-    5. It returns the document.
-    """
-    pass
-
-
-@router.post(
-    '/from_images',
-    response_model=Document,
-    status_code=201,
-    responses={}
-)
-async def create_document(
-    request: Images
-):
-    """
-    Create a new document from images.
-
-    1. It converts images into text using OCR tools asynchronously.
+    1. It converts single PDF file or multiple images into text using OCR tools.
     2. It chunks text into logical parts.
     3. It creates a new document in database.
     4. It creates a new chunk in database for each logical part.

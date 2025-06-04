@@ -10,3 +10,4 @@ Accepts several images or 1 pdf file, converts it to text, chunking into logical
 - whisper STT
 - streamlit
 - fastapi
+- sqlite

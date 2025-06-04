@@ -1,3 +1,5 @@
 Read README file to understand what this is project about
 The static structure is like this: {document_id}/{chunk_id}.[txt|jpg]
 Make sure to read database structure and api schemas
+Use helper methods from "helpers" folder
+database connection is in "database.py" file. It uses sqlite
