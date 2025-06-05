@@ -11,8 +11,8 @@ class ChatRequest(BaseModel):
     messages_history: list[Message]
     new_message_text: str | None
     new_message_speech: UploadFile | None
-    model: Literal['gemini-2.5-pro', 'gemini-2.5-flash']
+    model: Literal['google/gemini-2.5-pro-preview', 'google/gemini-2.5-flash-preview-05-20']
 
 class ChatResponse(BaseModel):
     text: str
-    speech: UploadFile | None
+    speech: bytes | None
