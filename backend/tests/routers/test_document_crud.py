@@ -18,7 +18,7 @@ test_engine = create_engine(
 
 @contextmanager
 def get_test_session() -> Generator[Session, None, None]:
-    """Test session that uses in-memory SQLite database"""
+    """Test session that uses SQLite database"""
     session = Session(test_engine)
     try:
         yield session
