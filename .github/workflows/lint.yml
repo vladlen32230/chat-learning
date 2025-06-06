@@ -1,0 +1,68 @@
+name: Lint Check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install linting dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black isort mypy
+
+    - name: Lint backend with flake8
+      run: |
+        cd backend
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --max-complexity=10 --max-line-length=88 --statistics
+
+    - name: Check backend code formatting with black
+      run: |
+        cd backend
+        black --check --diff .
+
+    - name: Check backend import sorting with isort
+      run: |
+        cd backend
+        isort --check-only --diff .
+
+    - name: Type check backend with mypy
+      run: |
+        cd backend
+        pip install -r requirements.txt
+        mypy . --ignore-missing-imports
+
+    - name: Lint frontend with flake8
+      run: |
+        cd frontend
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --max-complexity=10 --max-line-length=88 --statistics
+
+    - name: Check frontend code formatting with black
+      run: |
+        cd frontend
+        black --check --diff .
+
+    - name: Check frontend import sorting with isort
+      run: |
+        cd frontend
+        isort --check-only --diff .
+
+    - name: Type check frontend with mypy
+      run: |
+        cd frontend
+        pip install -r requirements.txt
+        mypy . --ignore-missing-imports

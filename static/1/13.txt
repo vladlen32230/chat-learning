@@ -1,3 +1,0 @@
-$$
-\operatorname{FFN}(x)=\max \left(0, x W_{1}+b_{1}\right) W_{2}+b_{2}
-$$

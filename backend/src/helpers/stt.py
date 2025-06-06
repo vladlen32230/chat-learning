@@ -1,5 +1,6 @@
 from openai import OpenAI
-from src.config import DEEPINFRA_API_KEY
+from src.config_settings import DEEPINFRA_API_KEY
+
 
 def transcribe(
     audio_file: bytes,
@@ -9,9 +10,8 @@ def transcribe(
         base_url="https://api.deepinfra.com/v1/openai",
     )
 
-    transcript = client.audio.transcriptions.create(
-        model="openai/whisper-large-v3",
-        file=audio_file
-    )
+    transcript: str = client.audio.transcriptions.create(
+        model="openai/whisper-large-v3", file=audio_file
+    ).text
 
-    return transcript.text
+    return transcript

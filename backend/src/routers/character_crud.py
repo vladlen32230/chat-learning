@@ -1,22 +1,19 @@
-from fastapi import APIRouter, HTTPException, Body
-from src.models import Character
-from src.database import get_session
-from sqlmodel import select
 from typing import Literal
 
-router = APIRouter(prefix='/character', tags=['character'])
+from fastapi import APIRouter, Body, HTTPException
+from sqlmodel import select
+from src.database_con import get_session
+from src.db_models import Character
+
+router = APIRouter(prefix="/character", tags=["character"])
 
 
-@router.post(
-    '',
-    response_model=Character,
-    status_code=201,
-    responses={}
-)
+@router.post("", response_model=Character, status_code=201, responses={})
 async def create_character(
     name: str = Body(...),
     prompt_description: str = Body(...),
-    voice_name: Literal['af_bella', 'af_nicole', 'af_heart', 'af_nova'] | None = Body(None)
+    voice_name: Literal["af_bella", "af_nicole", "af_heart", "af_nova"]
+    | None = Body(None),
 ):
     """
     Create a new character.
@@ -26,9 +23,7 @@ async def create_character(
     """
     with get_session() as session:
         character = Character(
-            name=name,
-            prompt_description=prompt_description,
-            voice_name=voice_name
+            name=name, prompt_description=prompt_description, voice_name=voice_name
         )
         session.add(character)
         session.flush()
@@ -36,12 +31,7 @@ async def create_character(
         return character.model_dump()
 
 
-@router.get(
-    '',
-    response_model=list[Character],
-    status_code=200,
-    responses={}
-)
+@router.get("", response_model=list[Character], status_code=200, responses={})
 async def get_characters():
     """
     Get all characters.
@@ -55,15 +45,11 @@ async def get_characters():
 
 
 @router.delete(
-    '/{character_id}',
+    "/{character_id}",
     status_code=204,
-    responses={
-        404: {"description": "Character not found"}
-    }
+    responses={404: {"description": "Character not found"}},
 )
-async def delete_character(
-    character_id: int
-):
+async def delete_character(character_id: int):
     """
     Delete a character.
 
@@ -74,6 +60,6 @@ async def delete_character(
         character = session.get(Character, character_id)
         if not character:
             raise HTTPException(status_code=404, detail="Character not found")
-        
+
         # Delete the character
         session.delete(character)

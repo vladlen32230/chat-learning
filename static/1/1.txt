@@ -1,1 +1,0 @@
-output values. These are concatenated and once again projected, resulting in the final values, as depicted in Figure 1.
