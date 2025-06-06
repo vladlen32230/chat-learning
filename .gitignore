@@ -4,3 +4,4 @@
 .cursorrules
 backend/database.db
 static/*
+**/.mypy_cache
