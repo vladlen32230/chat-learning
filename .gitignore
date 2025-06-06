@@ -3,3 +3,4 @@
 **/__pycache__
 .cursorrules
 backend/database.db
+static/*
