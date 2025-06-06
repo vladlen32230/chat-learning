@@ -1,7 +1,7 @@
 from sqlmodel import SQLModel, Field
-from typing import Literal
+from typing import Optional
 
-voiceNames = Literal['af_bella', 'af_nicole', 'af_heart', 'af_nova']
+voiceNames = ['af_bella', 'af_nicole', 'af_heart', 'af_nova']
 
 class Document(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
@@ -9,7 +9,7 @@ class Document(SQLModel, table=True):
 
 class Chunk(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
-    type: Literal['image', 'text']
+    type: str  # 'image' or 'text'
     document_id: int = Field(foreign_key="document.id")
     completed: bool = Field(default=False)
 
@@ -17,4 +17,4 @@ class Character(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     name: str
     prompt_description: str
-    voice_name: voiceNames | None
+    voice_name: Optional[str] = Field(default=None)  # one of: 'af_bella', 'af_nicole', 'af_heart', 'af_nova'

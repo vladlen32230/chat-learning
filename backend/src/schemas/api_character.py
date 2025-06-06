@@ -1,7 +1,7 @@
 from pydantic import BaseModel
-from src.models import voiceNames
+from typing import Literal
 
 class CreateCharacter(BaseModel):
     name: str
     prompt_description: str
-    voice_name: voiceNames | None = None
+    voice_name: Literal['af_bella', 'af_nicole', 'af_heart', 'af_nova'] | None = None

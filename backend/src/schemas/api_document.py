@@ -1,6 +1,7 @@
 from fastapi import UploadFile
 from pydantic import BaseModel
 from typing import Literal
+from src.models import Document, Chunk
 
 class DocumentProcess(BaseModel):
     files: list[UploadFile]
@@ -9,3 +10,7 @@ class DocumentProcess(BaseModel):
 
 class UpdateChunk(BaseModel):
     completed: bool
+
+class FullDocument(BaseModel):
+    document: Document
+    chunks: list[Chunk]

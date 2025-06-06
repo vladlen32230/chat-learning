@@ -1,6 +1,6 @@
 ### What does it do?
 
-Accepts several images or 1 pdf file, converts it to text, chunking into logical parts and choosing chat character to talk with about this part. It also has STT and TTS. Suitable for education.
+Accepts several images or pdf files, converts it to text, chunking into logical parts and choosing chat character to talk with about this part. It also has STT and TTS. Suitable for education.
 
 ### Used Technologies:
 - Mistral OCR

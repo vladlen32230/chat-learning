@@ -1,5 +1,5 @@
 from openai import OpenAI
-import os
+from src.config import DEEPINFRA_API_KEY
 
 async def generate_speech(
     text: str, 
@@ -8,7 +8,7 @@ async def generate_speech(
 ) -> bytes:
     client = OpenAI(
         base_url="https://api.deepinfra.com/v1/openai",
-        api_key=os.environ['DEEPINFRA_API_KEY']
+        api_key=DEEPINFRA_API_KEY
     )
 
     binary_response = client.audio.speech.create(

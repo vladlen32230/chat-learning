@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from src.schemas.api_character import CreateCharacter, UpdateCharacter
+from src.schemas.api_character import CreateCharacter
 from src.models import Character
 from src.database import get_session
 from sqlmodel import select
@@ -31,7 +31,7 @@ async def create_character(
         session.add(character)
         session.flush()
         session.refresh(character)
-        return character
+        return character.model_dump()
 
 
 @router.get(
@@ -49,7 +49,7 @@ async def get_characters():
     """
     with get_session() as session:
         characters = session.exec(select(Character)).all()
-        return characters
+        return [character.model_dump() for character in characters]
 
 
 @router.delete(

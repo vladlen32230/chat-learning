@@ -1,11 +1,11 @@
 from openai import OpenAI
-import os
+from src.config import DEEPINFRA_API_KEY
 
 def transcribe(
     audio_file: bytes,
 ) -> str:
     client = OpenAI(
-        api_key=os.environ['DEEPINFRA_API_KEY'],
+        api_key=DEEPINFRA_API_KEY,
         base_url="https://api.deepinfra.com/v1/openai",
     )
 

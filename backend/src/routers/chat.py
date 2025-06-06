@@ -138,4 +138,4 @@ async def chat(
     return ChatResponse(
         text=response_text,
         speech=speech_content
-    )
+    ).model_dump()

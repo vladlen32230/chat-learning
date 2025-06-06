@@ -4,13 +4,14 @@ from mistralai.models.ocrresponse import OCRResponse
 import asyncio
 from json import loads
 import re
+from src.config import OPENROUTER_API_KEY
 
 async def chunk_text(ocr_response: OCRResponse) -> list[str]:
     """
     Chunk is either plain text or base64 encoded image.
     """
     client = AsyncOpenAI(
-        api_key=os.environ['OPENROUTER_API_KEY'],
+        api_key=OPENROUTER_API_KEY,
         base_url="https://openrouter.ai/api/v1"
     )
 
@@ -19,7 +20,7 @@ async def chunk_text(ocr_response: OCRResponse) -> list[str]:
         "Every word should not be lost and should be in output list. "
         "Output ONLY a Python-style list of strings, where each string is one logical chunk "
         "that a student can learn independently. If you see like \"![img-0.jpeg](img-0.jpeg)\", "
-        "it should be treated as separate chunk."
+        "it should be treated as separate chunk. The quotes should be double so it can be parsed using json.loads."
     )
 
     requests = []
@@ -36,10 +37,14 @@ async def chunk_text(ocr_response: OCRResponse) -> list[str]:
                     "role": "user", 
                     "content": page.markdown
                 }
-            ]
+            ],
+
+            temperature=0.0
         ))
 
     responses = await asyncio.gather(*requests)
+
+    print(responses[0].choices[0].message.content)
 
     chunks_list = [loads(response.choices[0].message.content) for response in responses]
 

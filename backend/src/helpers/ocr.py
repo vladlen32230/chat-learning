@@ -1,11 +1,11 @@
 from mistralai import Mistral
 from mistralai.models.ocrresponse import OCRResponse
-import os
 from src.helpers.other import convert_file_to_base64
 from typing import Literal
+from src.config import MISTRAL_API_KEY
 
 async def process_ocr(file: bytes, file_type: Literal['jpg', 'pdf']) -> OCRResponse:
-    client = Mistral(api_key=os.environ['MISTRAL_API_KEY'])
+    client = Mistral(api_key=MISTRAL_API_KEY)
 
     if file_type == 'jpg':
         type = 'image_url'

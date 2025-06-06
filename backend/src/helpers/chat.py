@@ -1,8 +1,8 @@
 from openai import AsyncOpenAI
-import os
+from src.config import OPENROUTER_API_KEY
 
 client = AsyncOpenAI(
-    api_key=os.environ['OPENROUTER_API_KEY'],
+    api_key=OPENROUTER_API_KEY,
     base_url="https://openrouter.ai/api/v1"
 )
 
