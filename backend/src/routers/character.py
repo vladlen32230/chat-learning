@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException
-from src.schemas.api_character import CreateCharacter
+from fastapi import APIRouter, HTTPException, Body
 from src.models import Character
 from src.database import get_session
 from sqlmodel import select
+from typing import Literal
 
 router = APIRouter(prefix='/character', tags=['character'])
 
@@ -14,7 +14,9 @@ router = APIRouter(prefix='/character', tags=['character'])
     responses={}
 )
 async def create_character(
-    request: CreateCharacter
+    name: str = Body(...),
+    prompt_description: str = Body(...),
+    voice_name: Literal['af_bella', 'af_nicole', 'af_heart', 'af_nova'] | None = Body(None)
 ):
     """
     Create a new character.
@@ -24,9 +26,9 @@ async def create_character(
     """
     with get_session() as session:
         character = Character(
-            name=request.name,
-            prompt_description=request.prompt_description,
-            voice_name=request.voice_name
+            name=name,
+            prompt_description=prompt_description,
+            voice_name=voice_name
         )
         session.add(character)
         session.flush()

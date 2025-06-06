@@ -1,5 +1,5 @@
-from fastapi import APIRouter, HTTPException, File, Form, UploadFile
-from src.schemas.api_document import UpdateChunk, FullDocument
+from fastapi import APIRouter, HTTPException, File, Form, UploadFile, Body
+from src.schemas.api_document import FullDocument
 from src.models import Document, Chunk
 from src.database import get_session
 from src.helpers.ocr import process_ocr
@@ -9,7 +9,6 @@ import shutil
 import asyncio
 from pathlib import Path
 from sqlmodel import select
-from typing import Literal
 
 router = APIRouter(prefix='/document', tags=['document'])
 
@@ -214,7 +213,7 @@ async def delete_document(
 async def update_chunk(
     document_id: int,
     chunk_id: int,
-    request: UpdateChunk
+    completed: bool = Body(..., embed=True)
 ):
     """
     Update a chunk.
@@ -234,8 +233,9 @@ async def update_chunk(
             raise HTTPException(status_code=404, detail="Chunk not found")
         
         # Update the chunk
-        chunk.completed = request.completed
+        chunk.completed = completed
         session.add(chunk)
+        session.flush()
         session.refresh(chunk)
         
         return chunk.model_dump()

@@ -1,8 +1,6 @@
 from sqlmodel import SQLModel, Field
 from typing import Optional
 
-voiceNames = ['af_bella', 'af_nicole', 'af_heart', 'af_nova']
-
 class Document(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     name: str

@@ -4,7 +4,6 @@ from src.routers import document, character, chat
 from src.database import engine
 from src.models import Document, Chunk, Character
 from sqlmodel import SQLModel
-import uvicorn
 
 app = FastAPI()
 

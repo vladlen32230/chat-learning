@@ -1,0 +1,6 @@
+$$
+\begin{aligned}
+\operatorname{MultiHead}(Q, K, V) & =\operatorname{Concat}\left(\operatorname{head}_{1}, \ldots, \operatorname{head}_{\mathrm{h}}\right) W^{O} \\
+\text { where head }_{\mathrm{i}} & =\operatorname{Attention}\left(Q W_{i}^{Q}, K W_{i}^{K}, V W_{i}^{V}\right)
+\end{aligned}
+$$

@@ -1,15 +1,18 @@
-from fastapi import APIRouter, HTTPException
-from src.schemas.api_chat import ChatRequest, ChatResponse
+from fastapi import APIRouter, HTTPException, Body, UploadFile, File, Form
+from src.schemas.api_chat import ChatResponse, Message
 from src.models import Character, Chunk, Document
 from src.database import get_session
 from src.helpers.chat import chat_with_llm
 from src.helpers.stt import transcribe
 from src.helpers.tts import generate_speech
 from src.helpers.other import convert_file_to_base64
-from sqlmodel import select
 from pathlib import Path
+from typing import Literal
+import json
 
 router = APIRouter(prefix='/chat', tags=['chat'])
+
+static_dir = Path("../static")
 
 
 @router.post(
@@ -25,7 +28,11 @@ router = APIRouter(prefix='/chat', tags=['chat'])
 async def chat(
     document_id: int, 
     chunk_id: int, 
-    request: ChatRequest
+    character_id: int = Form(...),
+    messages_history: str = Form(...),  # JSON string
+    new_message_text: str | None = Form(None),
+    new_message_speech: UploadFile | None = File(None),
+    model: Literal['google/gemini-2.5-pro-preview', 'google/gemini-2.5-flash-preview-05-20'] = Form(...),
 ):
     """
     Chat with the character about chunk.
@@ -38,7 +45,7 @@ async def chat(
     """
     # Step 1: Retrieve character from database
     with get_session() as session:
-        character = session.get(Character, request.character_id)
+        character = session.get(Character, character_id)
         if not character:
             raise HTTPException(status_code=404, detail="Character not found")
         
@@ -51,20 +58,32 @@ async def chat(
         chunk = session.get(Chunk, chunk_id)
         if not chunk or chunk.document_id != document_id:
             raise HTTPException(status_code=404, detail="Chunk not found")
+        
+        session.expunge_all()
+    
+    # Parse messages_history from JSON string
+    try:
+        parsed_messages_history = json.loads(messages_history)
+        # Validate message structure
+        for msg in parsed_messages_history:
+            if not isinstance(msg, dict) or 'role' not in msg or 'content' not in msg:
+                raise HTTPException(status_code=400, detail="Invalid message format in messages_history")
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON format for messages_history")
     
     # Step 2: Retrieve chunk data from local storage
-    static_dir = Path("static") / str(document_id)
+    static_dir_document = static_dir / str(document_id)
     chunk_content = None
     chunk_image_url = None
     
     if chunk.type == "text":
-        chunk_file_path = static_dir / f"{chunk_id}.txt"
+        chunk_file_path = static_dir_document / f"{chunk_id}.txt"
         if not chunk_file_path.exists():
             raise HTTPException(status_code=404, detail="Chunk file not found")
         with open(chunk_file_path, 'r', encoding='utf-8') as f:
             chunk_content = f.read()
     else:  # image
-        chunk_file_path = static_dir / f"{chunk_id}.jpg"
+        chunk_file_path = static_dir_document / f"{chunk_id}.jpg"
         if not chunk_file_path.exists():
             raise HTTPException(status_code=404, detail="Chunk file not found")
         # Read image and convert to base64 for LLM
@@ -73,9 +92,9 @@ async def chat(
         chunk_image_url = convert_file_to_base64(image_bytes, 'image/jpeg')
     
     # Handle speech-to-text if audio is provided
-    user_message = request.new_message_text
-    if request.new_message_speech:
-        audio_content = await request.new_message_speech.read()
+    user_message = new_message_text
+    if new_message_speech:
+        audio_content = await new_message_speech.read()
         user_message = transcribe(audio_content)
     
     # Step 3: Generate prompt for LLM using character's prompt, chunk data, and history
@@ -84,7 +103,8 @@ async def chat(
             "role": "system",
             "content": (
                 f"This is your character's description: {character.prompt_description}\n\n"
-                "Answer from the character's perspective only."
+                "Answer from the character's perspective only. Also return text without formatting."
+                "Your response will be converted to character's voice."
             )
         }
     ]
@@ -113,10 +133,10 @@ async def chat(
         })
     
     # Add message history
-    for msg in request.messages_history:
+    for msg in parsed_messages_history:
         messages.append({
-            "role": msg.role,
-            "content": msg.content
+            "role": msg["role"],
+            "content": msg["content"]
         })
     
     # Add new user message
@@ -127,15 +147,17 @@ async def chat(
         })
     
     # Get response from LLM
-    response_text = await chat_with_llm(messages, request.model)
+    response_text = await chat_with_llm(messages, model)
     
     # Step 4: Generate speech if character has voice name
     speech_content = None
     if character.voice_name:
-        speech_content = await generate_speech(response_text, character.voice_name)
+        speech_bytes = await generate_speech(response_text, character.voice_name)
+        speech_content = convert_file_to_base64(speech_bytes, 'audio/mp3')
     
     # Step 5: Return response
     return ChatResponse(
         text=response_text,
-        speech=speech_content
+        speech=speech_content,
+        input_user_text=user_message
     ).model_dump()
