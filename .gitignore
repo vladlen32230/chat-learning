@@ -1,9 +1,7 @@
 **/.venv
 **/.env
-**/__pycache__
 .cursorrules
 backend/database.db
 static/*
-**/.mypy_cache
-**/.pytest_cache
-backend/.coverage
+**/*cache*
+**/.coverage

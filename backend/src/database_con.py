@@ -1,8 +1,15 @@
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Generator
 
 from sqlmodel import Session, create_engine
 from src.config_settings import DATABASE_URL
+
+# Ensure database directory exists for SQLite
+if DATABASE_URL and DATABASE_URL.startswith("sqlite:///"):
+    db_path = DATABASE_URL.replace("sqlite:///", "")
+    db_dir = Path(db_path).parent
+    db_dir.mkdir(parents=True, exist_ok=True)
 
 engine = create_engine(DATABASE_URL)
 

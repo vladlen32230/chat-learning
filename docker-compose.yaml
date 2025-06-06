@@ -1,0 +1,30 @@
+services:
+  chat-learning-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - 8015:8015
+    network_mode: host
+    environment:
+      - DATABASE_URL=sqlite:///app/data/database.db
+      - OPENROUTER_API_KEY=
+      - MISTRAL_API_KEY=
+      - DEEPINFRA_API_KEY=
+    command: uvicorn main:app --host 0.0.0.0 --port 8015
+    volumes:
+      - chat-learning-backend-database:/app/data
+
+  chat-learning-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - 8516:8516
+    network_mode: host
+    command: streamlit run app.py --server.port 8516
+    volumes:
+      - chat-learning-static:/app/static
+
+volumes:
+  chat-learning-backend-database:
