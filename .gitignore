@@ -6,3 +6,4 @@ backend/database.db
 static/*
 **/.mypy_cache
 **/.pytest_cache
+backend/.coverage

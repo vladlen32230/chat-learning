@@ -87,9 +87,6 @@ async def create_document(files: list[UploadFile] = File(...), name: str = Form(
                 status_code=400, detail=f"Unsupported file type: {file.filename}"
             )
 
-    if not valid_files:
-        raise HTTPException(status_code=400, detail="No valid PDF or image files found")
-
     # Prepare OCR requests for parallel processing
     ocr_tasks = []
     for file in valid_files:

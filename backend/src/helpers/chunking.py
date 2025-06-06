@@ -39,8 +39,6 @@ async def chunk_text(ocr_response: OCRResponse) -> list[str]:
 
     responses = await asyncio.gather(*requests)
 
-    print(responses[0].choices[0].message.content)
-
     chunks_list = [loads(response.choices[0].message.content) for response in responses]
 
     all_chunks = []

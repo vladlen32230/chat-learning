@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from src.models import Chunk, Document
+from src.db_models import Chunk, Document
 
 
 class FullDocument(BaseModel):

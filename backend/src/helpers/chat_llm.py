@@ -7,12 +7,9 @@ client = AsyncOpenAI(
 
 
 async def chat_with_llm(messages: list[dict], model_name: str) -> str:
-    response: str = (
-        await client.chat.completions.create(
-            model=model_name, messages=messages, top_p=0.95, temperature=0.9
-        )
-        .choices[0]
-        .message.content
+    response = await client.chat.completions.create(
+        model=model_name, messages=messages, top_p=0.95, temperature=0.9
     )
 
-    return response
+    content: str = response.choices[0].message.content
+    return content
