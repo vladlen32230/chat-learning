@@ -6,15 +6,15 @@ from mistralai.models.ocrresponse import OCRResponse
 from openai import AsyncOpenAI
 from src.config_settings import OPENROUTER_API_KEY
 
+client = AsyncOpenAI(
+    api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1"
+)
+
 
 async def chunk_text(ocr_response: OCRResponse) -> list[str]:
     """
     Chunk is either plain text or base64 encoded image.
     """
-    client = AsyncOpenAI(
-        api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1"
-    )
-
     system_prompt = (
         "You are a helpful assistant that will parse given text into logical chunks. "
         "Every word should not be lost and should be in output list. "

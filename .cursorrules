@@ -6,3 +6,4 @@ Database connection is in "database.py" file. It uses sqlite
 Backend will be served at port 8015
 Frontend will be served at port 8516
 Do not alter Readme file
+DO NOT CREATE README FILES OR __INIT__.py FILES OR ANY OTHER HELPER PYTHON SCRIPTS
