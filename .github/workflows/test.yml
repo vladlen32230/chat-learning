@@ -41,15 +41,7 @@ jobs:
     - name: Run tests with pytest
       run: |
         cd backend
-        python -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=term-missing --cov-fail-under=100
-
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./backend/coverage.xml
-        flags: src
-        name: codecov-src
-        fail_ci_if_error: true
+        python -m pytest tests/ -v --cov=src --cov-report=html --cov-report=term-missing --cov-fail-under=100
 
     - name: Archive test results
       uses: actions/upload-artifact@v4
@@ -58,4 +50,3 @@ jobs:
         name: test-results-${{ matrix.python-version }}
         path: |
           backend/htmlcov/
-          backend/coverage.xml
