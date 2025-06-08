@@ -1,0 +1,40 @@
+name: Continuous Deployment
+
+on:
+  push:
+    branches: [ main ]
+  workflow_run:
+    workflows: ["Test", "Lint Check"]
+    types:
+      - completed
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set environment variables
+        run: |
+          cat > .env << EOF
+          DATABASE_URL=sqlite:///app/data/database.db
+          STATIC_FILES_URL=http://localhost:5015
+          BACKEND_URL=http://localhost:8015
+          OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
+          MISTRAL_API_KEY=${{ secrets.MISTRAL_API_KEY }}
+          DEEPINFRA_API_KEY=${{ secrets.DEEPINFRA_API_KEY }}
+          EOF
+
+      - name: Deploy with Docker Compose
+        run: |
+          docker compose up -d
+
+      - name: Show running containers
+        run: |
+          docker compose ps
