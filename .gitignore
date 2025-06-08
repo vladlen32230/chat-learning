@@ -2,6 +2,7 @@
 **/.env
 .cursorrules
 backend/database.db
-static/*
+static/files
 **/*cache*
 **/.coverage
+backend/test.db

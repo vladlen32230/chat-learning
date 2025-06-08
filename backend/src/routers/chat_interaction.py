@@ -1,8 +1,9 @@
 import json
-from pathlib import Path
 from typing import Any, Dict, List, Literal, Union
 
+import httpx
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from src.config_settings import STATIC_FILES_URL
 from src.database_con import get_session
 from src.db_models import Character, Chunk, Document
 from src.helpers.chat_llm import chat_with_llm
@@ -12,8 +13,6 @@ from src.helpers.tts import generate_speech
 from src.schemas.api_chat import ChatResponse
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-
-static_dir = Path("../static")
 
 
 def _get_character_and_validate_chunk(
@@ -56,26 +55,37 @@ def _parse_messages_history(messages_history: str):
         )
 
 
-def _get_chunk_content(document_id: int, chunk: Chunk):
-    """Helper function to retrieve chunk content from local storage."""
-    static_dir_document = static_dir / str(document_id)
+async def _get_chunk_content(document_id: int, chunk: Chunk):
+    """Helper function to retrieve chunk content from static file server."""
     chunk_content = None
     chunk_image_url = None
 
     if chunk.type == "text":
-        chunk_file_path = static_dir_document / f"{chunk.id}.txt"
-        if not chunk_file_path.exists():
-            raise HTTPException(status_code=404, detail="Chunk file not found")
-        with open(chunk_file_path, "r", encoding="utf-8") as f:
-            chunk_content = f.read()
+        file_path = f"{document_id}/{chunk.id}.txt"
+        file_url = f"{STATIC_FILES_URL}/{file_path}"
+
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(file_url)
+                response.raise_for_status()
+                chunk_content = response.text
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 404:
+                    raise HTTPException(status_code=404, detail="Chunk file not found")
+
     else:  # image
-        chunk_file_path = static_dir_document / f"{chunk.id}.jpg"
-        if not chunk_file_path.exists():
-            raise HTTPException(status_code=404, detail="Chunk file not found")
-        # Read image and convert to base64 for LLM
-        with open(chunk_file_path, "rb") as f:
-            image_bytes = f.read()
-        chunk_image_url = convert_file_to_base64(image_bytes, "image/jpeg")
+        file_path = f"{document_id}/{chunk.id}.jpg"
+        file_url = f"{STATIC_FILES_URL}/{file_path}"
+
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(file_url)
+                response.raise_for_status()
+                image_bytes = response.content
+                chunk_image_url = convert_file_to_base64(image_bytes, "image/jpeg")
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 404:
+                    raise HTTPException(status_code=404, detail="Chunk file not found")
 
     return chunk_content, chunk_image_url
 
@@ -164,8 +174,8 @@ async def chat(
     # Parse messages_history from JSON string
     parsed_messages_history = _parse_messages_history(messages_history)
 
-    # Step 2: Retrieve chunk data from local storage
-    chunk_content, chunk_image_url = _get_chunk_content(document_id, chunk)
+    # Step 2: Retrieve chunk data from static file server
+    chunk_content, chunk_image_url = await _get_chunk_content(document_id, chunk)
 
     # Handle speech-to-text if audio is provided
     user_message = new_message_text

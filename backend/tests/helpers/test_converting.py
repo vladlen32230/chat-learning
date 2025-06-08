@@ -1,6 +1,5 @@
 from unittest.mock import patch
 
-import pytest
 from src.helpers.converting import convert_file_to_base64
 
 

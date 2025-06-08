@@ -201,18 +201,22 @@ def _send_chat_message(chunk, chat_key, user_message, wav_audio_data, selected_m
                 )
             else:
                 # Handle text-only message
-                chat_data = {
-                    "character_id": st.session_state.selected_character_id,
-                    "messages_history": [
-                        {"role": msg["role"], "content": msg["content"]}
-                        for msg in st.session_state.chat_messages[chat_key]
-                    ],
+                import json
+
+                form_data = {
+                    "character_id": str(st.session_state.selected_character_id),
+                    "messages_history": json.dumps(
+                        [
+                            {"role": msg["role"], "content": msg["content"]}
+                            for msg in st.session_state.chat_messages[chat_key]
+                        ]
+                    ),
                     "new_message_text": user_message.strip(),
                     "model": selected_model,
                 }
                 response = requests.post(
                     f"{API_BASE_URL}/chat/document/{st.session_state.selected_document_id}/chunk/{chunk['id']}",
-                    json=chat_data,
+                    data=form_data,
                 )
 
             if response.status_code == 200:

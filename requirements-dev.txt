@@ -51,6 +51,7 @@ SQLAlchemy==2.0.41
 sqlmodel==0.0.24
 starlette==0.46.2
 tqdm==4.67.1
+types-aiofiles==24.1.0.20250606
 types-requests==2.31.0.20240125
 typing-inspection==0.4.1
 typing_extensions==4.14.0

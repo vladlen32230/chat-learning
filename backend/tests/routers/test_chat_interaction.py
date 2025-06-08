@@ -2,7 +2,7 @@ import json
 import os
 from contextlib import contextmanager
 from typing import Generator
-from unittest.mock import mock_open, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -91,19 +91,42 @@ def setup_test_data():
         }
 
 
+def create_mock_httpx_response(content, status_code=200, is_text=True):
+    """Helper function to create mock httpx response"""
+    mock_response = MagicMock()
+    mock_response.status_code = status_code
+    if is_text:
+        mock_response.text = content
+    else:
+        mock_response.content = content
+    mock_response.raise_for_status = MagicMock()
+    if status_code >= 400:
+        from httpx import HTTPStatusError
+
+        mock_response.raise_for_status.side_effect = HTTPStatusError(
+            message=f"HTTP {status_code}", request=MagicMock(), response=mock_response
+        )
+    return mock_response
+
+
 @patch("src.routers.chat_interaction.chat_with_llm")
 @patch("src.routers.chat_interaction.generate_speech")
 @patch("src.routers.chat_interaction.convert_file_to_base64")
-@patch("builtins.open", new_callable=mock_open, read_data="Test chunk content")
-@patch("pathlib.Path.exists")
+@patch("httpx.AsyncClient")
 def test_chat_text_chunk_with_voice_success(
-    mock_exists, mock_file, mock_convert, mock_speech, mock_llm, client, setup_test_data
+    mock_httpx_client, mock_convert, mock_speech, mock_llm, client, setup_test_data
 ):
     """Test successful chat with text chunk and character with voice"""
     test_data = setup_test_data
 
-    # Setup mocks
-    mock_exists.return_value = True
+    # Setup httpx mock
+    mock_client_instance = AsyncMock()
+    mock_httpx_client.return_value.__aenter__.return_value = mock_client_instance
+    mock_client_instance.get.return_value = create_mock_httpx_response(
+        "Test chunk content"
+    )
+
+    # Setup other mocks
     mock_llm.return_value = "Test response from LLM"
     mock_speech.return_value = b"mock_speech_bytes"
     mock_convert.return_value = "base64_encoded_speech"
@@ -131,6 +154,8 @@ def test_chat_text_chunk_with_voice_success(
     assert data["speech"] == "base64_encoded_speech"
     assert data["input_user_text"] == "Hello, tell me about this content"
 
+    # Verify httpx client was called
+    mock_client_instance.get.assert_called_once()
     # Verify LLM was called with correct messages
     mock_llm.assert_called_once()
     mock_speech.assert_called_once_with("Test response from LLM", "af_bella")
@@ -138,16 +163,21 @@ def test_chat_text_chunk_with_voice_success(
 
 @patch("src.routers.chat_interaction.chat_with_llm")
 @patch("src.routers.chat_interaction.convert_file_to_base64")
-@patch("builtins.open", new_callable=mock_open, read_data=b"mock_image_bytes")
-@patch("pathlib.Path.exists")
+@patch("httpx.AsyncClient")
 def test_chat_image_chunk_without_voice_success(
-    mock_exists, mock_file, mock_convert, mock_llm, client, setup_test_data
+    mock_httpx_client, mock_convert, mock_llm, client, setup_test_data
 ):
     """Test successful chat with image chunk and character without voice"""
     test_data = setup_test_data
 
-    # Setup mocks
-    mock_exists.return_value = True
+    # Setup httpx mock for image content
+    mock_client_instance = AsyncMock()
+    mock_httpx_client.return_value.__aenter__.return_value = mock_client_instance
+    mock_client_instance.get.return_value = create_mock_httpx_response(
+        b"mock_image_bytes", is_text=False
+    )
+
+    # Setup other mocks
     mock_llm.return_value = "Test response about image"
     mock_convert.return_value = "base64_encoded_image"
 
@@ -169,19 +199,25 @@ def test_chat_image_chunk_without_voice_success(
     assert data["speech"] is None  # No voice for this character
     assert data["input_user_text"] == "What do you see in this image?"
 
+    # Verify httpx client was called
+    mock_client_instance.get.assert_called_once()
+
 
 @patch("src.routers.chat_interaction.chat_with_llm")
 @patch("src.routers.chat_interaction.transcribe")
-@patch("builtins.open", new_callable=mock_open, read_data="Test content")
-@patch("pathlib.Path.exists")
+@patch("httpx.AsyncClient")
 def test_chat_with_speech_input(
-    mock_exists, mock_file, mock_transcribe, mock_llm, client, setup_test_data
+    mock_httpx_client, mock_transcribe, mock_llm, client, setup_test_data
 ):
     """Test chat with speech input (STT)"""
     test_data = setup_test_data
 
-    # Setup mocks
-    mock_exists.return_value = True
+    # Setup httpx mock
+    mock_client_instance = AsyncMock()
+    mock_httpx_client.return_value.__aenter__.return_value = mock_client_instance
+    mock_client_instance.get.return_value = create_mock_httpx_response("Test content")
+
+    # Setup other mocks
     mock_transcribe.return_value = "Transcribed text from speech"
     mock_llm.return_value = "Response to transcribed text"
 
@@ -336,15 +372,17 @@ def test_chat_invalid_message_format(client, setup_test_data):
     assert "Invalid message format in messages_history" in response.json()["detail"]
 
 
-@patch("builtins.open", new_callable=mock_open, read_data="Test content")
-@patch("pathlib.Path.exists")
-def test_chat_text_chunk_file_not_found(
-    mock_exists, mock_file, client, setup_test_data
-):
+@patch("httpx.AsyncClient")
+def test_chat_text_chunk_file_not_found(mock_httpx_client, client, setup_test_data):
     """Test chat when text chunk file doesn't exist"""
     test_data = setup_test_data
 
-    mock_exists.return_value = False  # File doesn't exist
+    # Setup httpx mock to return 404
+    mock_client_instance = AsyncMock()
+    mock_httpx_client.return_value.__aenter__.return_value = mock_client_instance
+    mock_client_instance.get.return_value = create_mock_httpx_response(
+        "", status_code=404
+    )
 
     messages_history = json.dumps([])
 
@@ -362,15 +400,17 @@ def test_chat_text_chunk_file_not_found(
     assert response.json()["detail"] == "Chunk file not found"
 
 
-@patch("builtins.open", new_callable=mock_open, read_data=b"image data")
-@patch("pathlib.Path.exists")
-def test_chat_image_chunk_file_not_found(
-    mock_exists, mock_file, client, setup_test_data
-):
+@patch("httpx.AsyncClient")
+def test_chat_image_chunk_file_not_found(mock_httpx_client, client, setup_test_data):
     """Test chat when image chunk file doesn't exist"""
     test_data = setup_test_data
 
-    mock_exists.return_value = False  # File doesn't exist
+    # Setup httpx mock to return 404
+    mock_client_instance = AsyncMock()
+    mock_httpx_client.return_value.__aenter__.return_value = mock_client_instance
+    mock_client_instance.get.return_value = create_mock_httpx_response(
+        b"", status_code=404, is_text=False
+    )
 
     messages_history = json.dumps([])
 
@@ -389,15 +429,16 @@ def test_chat_image_chunk_file_not_found(
 
 
 @patch("src.routers.chat_interaction.chat_with_llm")
-@patch("builtins.open", new_callable=mock_open, read_data="Test content")
-@patch("pathlib.Path.exists")
-def test_chat_without_new_message(
-    mock_exists, mock_file, mock_llm, client, setup_test_data
-):
+@patch("httpx.AsyncClient")
+def test_chat_without_new_message(mock_httpx_client, mock_llm, client, setup_test_data):
     """Test chat without providing new_message_text or new_message_speech"""
     test_data = setup_test_data
 
-    mock_exists.return_value = True
+    # Setup httpx mock
+    mock_client_instance = AsyncMock()
+    mock_httpx_client.return_value.__aenter__.return_value = mock_client_instance
+    mock_client_instance.get.return_value = create_mock_httpx_response("Test content")
+
     mock_llm.return_value = "Response without new message"
 
     messages_history = json.dumps(

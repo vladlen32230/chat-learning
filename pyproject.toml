@@ -55,8 +55,7 @@ python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = [
-    "--cov=src/helpers",
-    "--cov=src/routers",
+    "--cov=src",
     "--cov-fail-under=100",
     "--strict-markers",
     "--disable-warnings",

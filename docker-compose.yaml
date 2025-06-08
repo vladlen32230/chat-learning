@@ -8,6 +8,7 @@ services:
     network_mode: host
     environment:
       - DATABASE_URL=sqlite:///app/data/database.db
+      - STATIC_FILES_URL=http://localhost:5015
       - OPENROUTER_API_KEY=
       - MISTRAL_API_KEY=
       - DEEPINFRA_API_KEY=
@@ -21,10 +22,23 @@ services:
       dockerfile: Dockerfile
     ports:
       - 8516:8516
+    environment:
+      - STATIC_FILES_URL=http://localhost:5015
+      - BACKEND_URL=http://localhost:8015
     network_mode: host
     command: streamlit run app.py --server.port 8516
+
+  chat-learning-static:
+    build:
+      context: ./static
+      dockerfile: Dockerfile
+    ports:
+      - 5015:5015
+    network_mode: host
     volumes:
-      - chat-learning-static:/app/static
+      - chat-learning-static-files:/app/files
+    command: uvicorn server:app --host 0.0.0.0 --port 5015
 
 volumes:
   chat-learning-backend-database:
+  chat-learning-static-files:

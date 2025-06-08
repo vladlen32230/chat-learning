@@ -1,10 +1,12 @@
 import asyncio
 import base64
-import shutil
-from pathlib import Path
+import io
+import sys
 
+import httpx
 from fastapi import APIRouter, Body, File, Form, HTTPException, UploadFile
 from sqlmodel import select
+from src.config_settings import STATIC_FILES_URL
 from src.database_con import get_session
 from src.db_models import Chunk, Document
 from src.helpers.chunking import chunk_text
@@ -12,8 +14,6 @@ from src.helpers.ocr import process_ocr
 from src.schemas.api_document import FullDocument
 
 router = APIRouter(prefix="/document", tags=["document"])
-
-static_dir = Path("../static")
 
 
 @router.get(
@@ -125,11 +125,8 @@ async def create_document(files: list[UploadFile] = File(...), name: str = Form(
         session.add(document)
         session.flush()  # Get the document ID
 
-        # Create static directory for this document
-        static_dir_path = static_dir / str(document.id)
-        static_dir_path.mkdir(parents=True, exist_ok=True)
-
         # Process each chunk and create database entries
+        print(all_chunks, file=sys.stderr, flush=True)
         for chunk_content in all_chunks:
             # Determine chunk type based on content
             is_base64_image = chunk_content.startswith("data:image/jpeg;base64,")
@@ -140,19 +137,49 @@ async def create_document(files: list[UploadFile] = File(...), name: str = Form(
             session.add(chunk)
             session.flush()  # Get the chunk ID
 
-            # Save chunk content to static file
+            # Upload chunk content to static file server
             if chunk_type == "image":
-                # Extract base64 data and save as JPG
+                # Extract base64 data and upload as JPG
                 base64_data = chunk_content.split(",")[1]
                 image_data = base64.b64decode(base64_data)
-                file_path = static_dir_path / f"{chunk.id}.jpg"
-                with open(file_path, "wb") as f:
-                    f.write(image_data)
+                file_path = f"{document.id}/{chunk.id}.jpg"
+                print(
+                    f"Uploading image to {STATIC_FILES_URL}/{file_path}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                async with httpx.AsyncClient() as client:
+                    upload_files = {
+                        "file": (
+                            f"{chunk.id}.jpg",
+                            io.BytesIO(image_data),
+                            "image/jpeg",
+                        )
+                    }
+                    response = await client.post(
+                        f"{STATIC_FILES_URL}/{file_path}", files=upload_files
+                    )
+                    response.raise_for_status()
             else:
-                # Save as text file
-                file_path = static_dir_path / f"{chunk.id}.txt"
-                with open(file_path, "w", encoding="utf-8") as f:
-                    f.write(chunk_content)
+                # Upload as text file
+                file_path = f"{document.id}/{chunk.id}.txt"
+                print(
+                    f"Uploading text to {STATIC_FILES_URL}/{file_path}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                async with httpx.AsyncClient() as client:
+                    upload_files = {
+                        "file": (
+                            f"{chunk.id}.txt",
+                            io.BytesIO(chunk_content.encode("utf-8")),
+                            "text/plain",
+                        )
+                    }
+                    response = await client.post(
+                        f"{STATIC_FILES_URL}/{file_path}", files=upload_files
+                    )
+                    response.raise_for_status()
 
         session.refresh(document)
         return document.model_dump()
@@ -165,7 +192,7 @@ async def delete_document(document_id: int):
 
     1. It deletes a document from database.
     2. It deletes all chunks from database.
-    3. It deletes all files from local storage.
+    3. It deletes all files from static file server.
     """
     with get_session() as session:
         # Check if document exists
@@ -173,21 +200,34 @@ async def delete_document(document_id: int):
         if not document:
             raise HTTPException(status_code=404, detail="Document not found")
 
-        static_dir_path = static_dir / str(document_id)
-
-        # Delete all chunks associated with the document
+        # Get all chunks associated with the document
         chunks = session.exec(
             select(Chunk).where(Chunk.document_id == document_id)
         ).all()
+
+        # Delete files from static file server
+        async with httpx.AsyncClient() as client:
+            for chunk in chunks:
+                if chunk.type == "text":
+                    file_path = f"{document_id}/{chunk.id}.txt"
+                else:  # image
+                    file_path = f"{document_id}/{chunk.id}.jpg"
+
+                try:
+                    response = await client.delete(f"{STATIC_FILES_URL}/{file_path}")
+                    # Don't raise error if file doesn't exist (404), but log other errors
+                    if response.status_code not in [204, 404]:
+                        response.raise_for_status()
+                except httpx.RequestError:
+                    # Continue deletion even if static server is unreachable
+                    pass
+
+        # Delete all chunks from database
         for chunk in chunks:
             session.delete(chunk)
 
-        # Delete the document
+        # Delete the document from database
         session.delete(document)
-
-        # Delete files from static storage
-        if static_dir_path.exists():
-            shutil.rmtree(static_dir_path)
 
 
 @router.put(

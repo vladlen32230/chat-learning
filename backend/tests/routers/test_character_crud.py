@@ -11,7 +11,7 @@ from src.db_models import Character
 
 # Define test engine with proper SQLite configuration for testing
 test_engine = create_engine(
-    "sqlite:///test.db", connect_args={"check_same_thread": True}
+    "sqlite:///test.db", connect_args={"check_same_thread": False}
 )
 
 
@@ -35,7 +35,7 @@ def client():
     """Create test client with overridden database session"""
     SQLModel.metadata.create_all(test_engine)
     # Override the get_session dependency with correct patch target
-    with patch("src.database_con.get_session", get_test_session):
+    with patch("src.routers.character_crud.get_session", get_test_session):
         yield TestClient(app)
 
     SQLModel.metadata.drop_all(test_engine)
@@ -60,7 +60,7 @@ def test_create_character_success(client):
     assert "id" in data
 
     # Verify database entry
-    with Session(test_engine) as session:
+    with get_test_session() as session:
         character = session.get(Character, data["id"])
         assert character is not None
         assert character.name == "Test Character"
